@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-import bcrypt
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
 import yaml
+
+try:
+    import bcrypt
+except ImportError:  # pragma: no cover
+    bcrypt = None
 
 from services.auth_log_service import registrar_login, registrar_logout
 
@@ -58,6 +62,8 @@ def _verify_password(password: str, stored_value: str) -> bool:
     stored = _clean_text(stored_value)
     plain = str(password or "")
     if stored.startswith("$2a$") or stored.startswith("$2b$") or stored.startswith("$2y$"):
+        if bcrypt is None:
+            return False
         try:
             return bcrypt.checkpw(plain.encode("utf-8"), stored.encode("utf-8"))
         except Exception:

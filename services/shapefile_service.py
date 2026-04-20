@@ -10,7 +10,7 @@ import pandas as pd
 import requests
 import streamlit as st
 
-from core.settings import LOCAL_SHAPEFILE_PATH, ONEDRIVE_ROOT_DIR, SHAPEFILE_QUERY, SHAPEFILE_URL
+from core.settings import BASE_DIR, LOCAL_SHAPEFILE_PATH, ONEDRIVE_ROOT_DIR, SHAPEFILE_QUERY, SHAPEFILE_URL
 
 
 FIELD_ALIASES = {
@@ -132,12 +132,13 @@ def _search_files_recursive(root: Path, query: str) -> list[dict[str, str]]:
 
 def _rank_candidates(candidates: list[dict[str, str]], query: str) -> list[dict[str, str]]:
     query_token = _normalize_name(query)
+    project_data_dir = str((BASE_DIR / "data").resolve()).lower()
 
     def score(item: dict[str, str]) -> tuple[int, int, int, int, str]:
         matched_token = _normalize_name(item["matched_name"])
         exact = int(bool(query_token) and matched_token == query_token)
         contains = int(bool(query_token) and query_token in matched_token)
-        local = int(item["full_path"].lower().startswith(str(Path("C:/04/data")).lower()))
+        local = int(item["full_path"].lower().startswith(project_data_dir))
         shp_bonus = int(item["extension"] == ".shp")
         return (exact, contains, local, shp_bonus, item["full_path"].lower())
 
@@ -156,7 +157,7 @@ def find_shapefile_candidate() -> dict[str, str]:
             "matched_name": Path(SHAPEFILE_URL).name or "shape.zip",
         }
 
-    roots = [Path("C:/04/data")]
+    roots = [BASE_DIR / "data"]
     if ONEDRIVE_ROOT_DIR:
         roots.append(ONEDRIVE_ROOT_DIR)
 
@@ -168,7 +169,11 @@ def find_shapefile_candidate() -> dict[str, str]:
 
     ranked = _rank_candidates(all_candidates, SHAPEFILE_QUERY)
     if not ranked:
-        raise FileNotFoundError("Nenhum shapefile .shp ou .zip contendo shapefile foi encontrado.")
+        searched_roots = ", ".join(str(root) for root in roots)
+        raise FileNotFoundError(
+            "Nenhum shapefile .shp ou .zip contendo shapefile foi encontrado. "
+            f"Locais pesquisados: {searched_roots}"
+        )
     return ranked[0]
 
 

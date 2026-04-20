@@ -243,7 +243,20 @@ def _render_authenticated_app() -> None:
         subtitle="Mapa, filtros, documentos e camadas de apoio territorial.",
     )
 
-    fund_context = load_fund_context()
+    try:
+        fund_context = load_fund_context()
+    except FileNotFoundError as exc:
+        st.error("Base fundiaria principal nao encontrada no ambiente atual.")
+        st.info(
+            "Inclua o shapefile principal em `data/`, configure `AVANTE_LOCAL_SHAPEFILE` "
+            "ou informe `AVANTE_SHAPEFILE_URL` no deploy."
+        )
+        st.caption(str(exc))
+        st.stop()
+    except Exception as exc:
+        st.error("Nao foi possivel carregar a base fundiaria principal.")
+        st.caption(str(exc))
+        st.stop()
     gdf = fund_context["gdf"]
     resolved_fields = fund_context["resolved_fields"]
     index_df = load_index_dataframe()
