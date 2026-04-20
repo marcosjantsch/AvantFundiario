@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import io
 import re
 from pathlib import Path
@@ -16,6 +17,51 @@ def _is_url(value: str) -> bool:
     return value.startswith("http://") or value.startswith("https://")
 
 
+def _is_onedrive_share_url(value: str) -> bool:
+    lowered = str(value or "").lower()
+    return "1drv.ms/" in lowered or "onedrive.live.com/" in lowered
+
+
+def _encode_onedrive_share_url(value: str) -> str:
+    token = base64.b64encode(value.encode("utf-8")).decode("utf-8")
+    token = token.replace("/", "_").replace("+", "-").rstrip("=")
+    return f"u!{token}"
+
+
+def _onedrive_api_url(share_url: str, suffix: str) -> str:
+    token = _encode_onedrive_share_url(share_url)
+    suffix = suffix if suffix.startswith("/") else f"/{suffix}"
+    return f"https://api.onedrive.com/v1.0/shares/{token}{suffix}"
+
+
+@st.cache_data(show_spinner=False, ttl=900)
+def _list_onedrive_folder_children(folder_url: str) -> list[dict[str, object]]:
+    response = requests.get(_onedrive_api_url(folder_url, "/root/children"), timeout=120)
+    response.raise_for_status()
+    payload = response.json() or {}
+    return list(payload.get("value") or [])
+
+
+def _download_onedrive_shared_file(source_url: str) -> bytes:
+    response = requests.get(_onedrive_api_url(source_url, "/root/content"), timeout=120, allow_redirects=True)
+    response.raise_for_status()
+    return response.content
+
+
+def _download_onedrive_folder_file(folder_url: str, file_name: str) -> bytes:
+    wanted = str(file_name or "").strip().casefold()
+    for item in _list_onedrive_folder_children(folder_url):
+        item_name = str((item or {}).get("name") or "").strip()
+        if item_name.casefold() != wanted:
+            continue
+        download_url = str((item or {}).get("@content.downloadUrl") or "").strip()
+        if download_url:
+            response = requests.get(download_url, timeout=120)
+            response.raise_for_status()
+            return response.content
+    raise FileNotFoundError(f"Arquivo nao encontrado na pasta compartilhada: {file_name}")
+
+
 def _normalize_token(value: object) -> str:
     text = str(value or "").strip().lower()
     text = re.sub(r"\.pdf$", "", text)
@@ -26,6 +72,8 @@ def _normalize_token(value: object) -> str:
 def _load_bytes_from_source(source: str | Path) -> bytes:
     source_str = str(source)
     if _is_url(source_str):
+        if _is_onedrive_share_url(source_str):
+            return _download_onedrive_shared_file(source_str)
         response = requests.get(source_str, timeout=120)
         response.raise_for_status()
         return response.content
@@ -102,6 +150,8 @@ def _download_pdf_content(file_name: str, file_url: str = "", file_id: str = "")
         return response.content
 
     if DOCS_BASE_URL:
+        if _is_onedrive_share_url(DOCS_BASE_URL):
+            return _download_onedrive_folder_file(DOCS_BASE_URL, file_name)
         base = DOCS_BASE_URL.rstrip("/")
         response = requests.get(f"{base}/{quote(file_name)}", timeout=120)
         response.raise_for_status()

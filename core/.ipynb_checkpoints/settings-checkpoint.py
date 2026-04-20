@@ -20,18 +20,8 @@ LOCAL_INDEX_PATH = Path(
 LOCAL_DOCS_DIR = Path(os.getenv("AVANTE_LOCAL_DOCS_DIR", BASE_DIR / "data" / "RRDocs"))
 
 SHAPEFILE_URL = os.getenv("AVANTE_SHAPEFILE_URL", "").strip()
-INDEX_URL = os.getenv(
-    "AVANTE_INDEX_URL",
-    "https://1drv.ms/x/c/8b88b81c064543d3/IQD7BgHZu2HoSJgnrFbCqxWiAenPGpFmOK8wFImKqmZqbnE?e=7JCViJ",
-).strip()
-DOCS_BASE_URL = os.getenv(
-    "AVANTE_DOCS_BASE_URL",
-    "https://1drv.ms/f/c/8b88b81c064543d3/IgDTQ0UGHLiIIICLUV0IAAAAAeYZ-IYCKnnjmVsmhN1PnOA?e=aUtg9t",
-).strip()
-REMOTE_DATA_FOLDER_URL = os.getenv(
-    "AVANTE_REMOTE_DATA_URL",
-    "https://1drv.ms/f/c/8b88b81c064543d3/IgBGEAmSs4rFSKtxZck7F0iDAbjN8qgzzI2KnfHX6MyE3aU?e=ho0Y2s",
-).strip()
+INDEX_URL = os.getenv("AVANTE_INDEX_URL", "").strip()
+DOCS_BASE_URL = os.getenv("AVANTE_DOCS_BASE_URL", "").strip()
 
 DOCUMENT_COLUMNS = ("MATRICULA", "CCIR", "ITR", "CAR1", "GEO", "CAR_ESTADUAL", "Outros")
 

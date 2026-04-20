@@ -259,7 +259,16 @@ def _render_authenticated_app() -> None:
         st.stop()
     gdf = fund_context["gdf"]
     resolved_fields = fund_context["resolved_fields"]
-    index_df = load_index_dataframe()
+    try:
+        index_df = load_index_dataframe()
+    except FileNotFoundError as exc:
+        st.warning("Indice de documentos nao encontrado no ambiente atual. Os downloads ficarao indisponiveis.")
+        st.caption(str(exc))
+        index_df = pd.DataFrame(columns=["arquivo", "nome_sem_extensao", "match_key", "file_name", "file_url", "file_id"])
+    except Exception as exc:
+        st.warning("Nao foi possivel carregar o indice de documentos. Os downloads ficarao indisponiveis.")
+        st.caption(str(exc))
+        index_df = pd.DataFrame(columns=["arquivo", "nome_sem_extensao", "match_key", "file_name", "file_url", "file_id"])
     filters = render_sidebar(
         gdf,
         resolved_fields=resolved_fields,
