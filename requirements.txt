@@ -9,3 +9,6 @@ pyproj
 numpy
 requests
 openpyxl
+PyYAML
+bcrypt
+streamlit-authenticator>=0.2.3
