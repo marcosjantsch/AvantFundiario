@@ -7,10 +7,9 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
-import requests
 import streamlit as st
 
-from core.settings import BASE_DIR, LOCAL_SHAPEFILE_PATH, SHAPEFILE_QUERY, SHAPEFILE_URL
+from core.settings import BASE_DIR, LOCAL_SHAPEFILE_PATH, SHAPEFILE_QUERY
 
 
 FIELD_ALIASES = {
@@ -64,14 +63,6 @@ def resolve_required_fields(columns: list[str]) -> dict[str, str]:
 
 def _normalize_name(value: object) -> str:
     return normalize_field_name(str(value or ""))
-
-
-def _download_remote_zip(url: str, target_dir: Path) -> Path:
-    response = requests.get(url, timeout=240)
-    response.raise_for_status()
-    zip_path = target_dir / "shape.zip"
-    zip_path.write_bytes(response.content)
-    return zip_path
 
 
 def _extract_zip(zip_path: Path, target_dir: Path) -> Path:
@@ -147,16 +138,6 @@ def _rank_candidates(candidates: list[dict[str, str]], query: str) -> list[dict[
 
 @st.cache_data(show_spinner="Localizando shapefile...")
 def find_shapefile_candidate() -> dict[str, str]:
-    if SHAPEFILE_URL:
-        return {
-            "file_name": Path(SHAPEFILE_URL).name or "shape.zip",
-            "full_path": SHAPEFILE_URL,
-            "identifier": SHAPEFILE_URL,
-            "extension": Path(SHAPEFILE_URL).suffix.lower() or ".zip",
-            "source": "url",
-            "matched_name": Path(SHAPEFILE_URL).name or "shape.zip",
-        }
-
     roots = [BASE_DIR / "data"]
 
     all_candidates: list[dict[str, str]] = []
@@ -188,13 +169,6 @@ def _load_shapefile(shp_path: Path) -> gpd.GeoDataFrame:
 
 def _load_shapefile_from_candidate(candidate: dict[str, str]) -> gpd.GeoDataFrame:
     source = candidate["source"]
-    if source == "url":
-        with tempfile.TemporaryDirectory(prefix="avante_shape_") as tmp_dir:
-            tmp_path = Path(tmp_dir)
-            zip_path = _download_remote_zip(candidate["identifier"], tmp_path)
-            shp_path = _extract_zip(zip_path, tmp_path / "shape")
-            return _load_shapefile(shp_path)
-
     path = Path(candidate["full_path"])
     if source == "zip":
         with tempfile.TemporaryDirectory(prefix="avante_shape_zip_") as tmp_dir:

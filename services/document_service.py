@@ -4,20 +4,15 @@ import io
 import re
 import unicodedata
 from pathlib import Path
-from urllib.parse import quote, urlparse
+from urllib.parse import urlparse
 
 import pandas as pd
-import requests
 import streamlit as st
 
 from core.settings import (
-    DOCS_BASE_URL,
     GCS_BUCKET_NAME,
     GCS_DOCS_PREFIX,
-    GCS_INDEX_BLOB,
-    INDEX_URL,
     LOCAL_DOCS_FALLBACK_DIR,
-    LOCAL_DOCS_DIR,
     LOCAL_INDEX_PATH,
 )
 
@@ -33,10 +28,6 @@ except ImportError:  # pragma: no cover
 
 
 INDEX_SESSION_KEY = "_document_index_df"
-
-
-def _is_url(value: str) -> bool:
-    return value.startswith("http://") or value.startswith("https://")
 
 
 def _is_gs_url(value: str) -> bool:
@@ -100,12 +91,6 @@ def _download_gcs_bytes(bucket_name: str, blob_name: str) -> bytes:
     raise RuntimeError(f"Falha ao acessar gs://{bucket_name}/{blob_name}") from last_error
 
 
-def _download_default_gcs_index() -> bytes:
-    if not GCS_BUCKET_NAME:
-        raise FileNotFoundError("Bucket GCS nao configurado para leitura do indice.")
-    return _download_gcs_bytes(GCS_BUCKET_NAME, GCS_INDEX_BLOB)
-
-
 def _download_default_gcs_pdf(file_name: str) -> bytes:
     if not GCS_BUCKET_NAME:
         raise FileNotFoundError("Bucket GCS nao configurado para leitura dos PDFs.")
@@ -117,10 +102,6 @@ def _load_bytes_from_source(source: str | Path) -> bytes:
     if _is_gs_url(source_str):
         bucket_name, blob_name = _parse_gs_url(source_str)
         return _download_gcs_bytes(bucket_name, blob_name)
-    if _is_url(source_str):
-        response = requests.get(source_str, timeout=120)
-        response.raise_for_status()
-        return response.content
 
     path = Path(source_str)
     if not path.exists():
@@ -151,12 +132,8 @@ def normalize_shared_name(value: object) -> str:
 
 @st.cache_data(show_spinner="Lendo indice de arquivos...")
 def load_index_dataframe() -> pd.DataFrame:
-    source = INDEX_URL or str(LOCAL_INDEX_PATH)
-    try:
-        payload = _load_bytes_from_source(source)
-    except FileNotFoundError:
-        payload = _download_default_gcs_index()
-        source = f"gs://{GCS_BUCKET_NAME}/{GCS_INDEX_BLOB}"
+    source = LOCAL_INDEX_PATH
+    payload = _load_bytes_from_source(source)
 
     if str(source).lower().endswith(".txt"):
         lines = [line.strip() for line in payload.decode("utf-8", errors="ignore").splitlines() if line.strip()]
@@ -209,7 +186,7 @@ def split_document_values(value: object) -> list[str]:
 
 def _search_local_pdf_path(file_name: str) -> Path | None:
     wanted = normalize_shared_name(file_name)
-    search_roots = [LOCAL_DOCS_DIR, LOCAL_DOCS_FALLBACK_DIR]
+    search_roots = [LOCAL_DOCS_FALLBACK_DIR]
     for root in search_roots:
         if not root.exists():
             continue
@@ -227,24 +204,7 @@ def _download_pdf_content(file_name: str, file_url: str = "", file_id: str = "")
         if _is_gs_url(file_url):
             bucket_name, blob_name = _parse_gs_url(file_url)
             return _download_gcs_bytes(bucket_name, blob_name)
-        response = requests.get(file_url, timeout=120)
-        response.raise_for_status()
-        return response.content
-
-    if file_id:
-        response = requests.get(f"https://drive.google.com/uc?export=download&id={quote(file_id)}", timeout=120)
-        response.raise_for_status()
-        return response.content
-
-    if DOCS_BASE_URL:
-        if _is_gs_url(DOCS_BASE_URL):
-            bucket_name, base_blob = _parse_gs_url(DOCS_BASE_URL)
-            blob_name = "/".join(part for part in [base_blob.rstrip("/"), file_name] if part)
-            return _download_gcs_bytes(bucket_name, blob_name)
-        base = DOCS_BASE_URL.rstrip("/")
-        response = requests.get(f"{base}/{quote(file_name)}", timeout=120)
-        response.raise_for_status()
-        return response.content
+        raise FileNotFoundError(f"Referencia de arquivo nao suportada: {file_url}")
 
     if GCS_BUCKET_NAME:
         try:
@@ -256,7 +216,7 @@ def _download_pdf_content(file_name: str, file_url: str = "", file_id: str = "")
     if pdf_path is None:
         raise FileNotFoundError(
             f"PDF nao encontrado: {file_name}. Locais pesquisados: gs://{GCS_BUCKET_NAME}/{_gcs_blob_path(file_name)}, "
-            f"{LOCAL_DOCS_DIR} e {LOCAL_DOCS_FALLBACK_DIR}"
+            f"{LOCAL_DOCS_FALLBACK_DIR}"
         )
     return pdf_path.read_bytes()
 
