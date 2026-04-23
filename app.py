@@ -141,8 +141,7 @@ def _render_authenticated_app() -> None:
     except FileNotFoundError as exc:
         st.error("Base fundiaria principal nao encontrada no ambiente atual.")
         st.info(
-            "Inclua o shapefile principal em `data/`, configure `AVANTE_LOCAL_SHAPEFILE` "
-            "ou informe `AVANTE_SHAPEFILE_URL` no deploy."
+            "Inclua o shapefile principal `Geo.shp` e seus arquivos auxiliares dentro de `data/`."
         )
         st.caption(str(exc))
         st.stop()
