@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -12,6 +13,7 @@ try:
 except ImportError:  # pragma: no cover
     bcrypt = None
 
+from core.settings import LOGO_PATH
 from services.auth_log_service import registrar_login, registrar_logout
 
 
@@ -141,10 +143,19 @@ def render_login_screen(config_path: str) -> bool:
     margin_left, brand_col, form_col, margin_right = st.columns([0.12, 1.0, 0.9, 0.12], vertical_alignment="top")
 
     with brand_col:
+        logo_path = Path(LOGO_PATH)
+        logo_html = "<div class='af-login-logo-fallback'>AV</div>"
+        if logo_path.exists():
+            encoded_logo = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+            logo_html = f"<img src='data:image/png;base64,{encoded_logo}' class='af-login-logo-image' alt='Avant logo' />"
+
         st.markdown(
-            """
+            f"""
             <div class="af-login-brand">
-                <div class="af-login-kicker">Avant Platform</div>
+                <div class="af-login-topbar">
+                    <div class="af-login-logo-card">{logo_html}</div>
+                    <div class="af-login-kicker">Avant Platform</div>
+                </div>
                 <div class="af-login-title">Consulta Fundiaria</div>
                 <div class="af-login-subtitle">
                     Ambiente corporativo para consulta territorial, filtro fundiario,

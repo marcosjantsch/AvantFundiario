@@ -261,8 +261,42 @@ def apply_styles() -> None:
             background:
                 radial-gradient(circle at top right, rgba(16, 201, 187, 0.22), transparent 30%),
                 radial-gradient(circle at bottom left, rgba(23, 120, 230, 0.16), transparent 32%),
-                linear-gradient(180deg, #17314f 0%, #10253b 100%);
+            linear-gradient(180deg, #17314f 0%, #10253b 100%);
             color: #edf5fb;
+        }
+
+        .af-login-topbar {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 1.1rem;
+        }
+
+        .af-login-logo-card {
+            width: 68px;
+            height: 68px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+
+        .af-login-logo-image {
+            width: 46px;
+            height: 46px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .af-login-logo-fallback {
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
         }
 
         .af-login-kicker {
